@@ -1,5 +1,14 @@
-  {
-    "cities": [
+{
+  "users": {
+    "id": 1,
+    "email": "user@example.com",
+    "password": "password",
+    "name": "User Name"
+  },
+  "tokens": [],
+  "login": [],
+  "register": [],
+  "cities": [
     {
       "id": "54d8a23438fe5d27d500001c",
       "slug": "london",
