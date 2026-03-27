@@ -166,6 +166,7 @@ io.on('connection', (socket) => {
             userName,
             userAvatar,
             content,
+            seenBy: [],
             timestamp: new Date().toISOString()
         };
 
@@ -182,6 +183,29 @@ io.on('connection', (socket) => {
         db.get("messages").push(newMessage).write();
 
         io.to(eventKey).emit('message', newMessage);
+    });
+
+    socket.on("seen", ({ eventId, messageIds, userId }) => {
+        const eventKey = String(eventId);
+
+        const messages = messagesByEvent.get(eventKey) || [];
+
+        messages.forEach((msg) => {
+            if (messageIds.includes(msg.id)) {
+                msg.seenBy = msg.seenBy || [];
+
+                if (!msg.seenBy.includes(userId)) {
+                    msg.seenBy.push(userId);
+                }
+
+                db.get("messages")
+                    .find({ id: msg.id })
+                    .assign({ seenBy: msg.seenBy })
+                    .write();
+            }
+        });
+
+        io.to(eventKey).emit("seen", { messageIds, userId });
     });
 
     socket.on('disconnect', () => {

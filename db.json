@@ -397,7 +397,8 @@
       "userId": "1",
       "userName": "Jean Dupont",
       "content": "Qui vient à cet événement ?",
-      "timestamp": "2026-03-27T10:00:00.000Z"
+      "timestamp": "2026-03-27T10:00:00.000Z",
+      "seenBy": []
     },
     {
       "id": "2",
@@ -405,7 +406,8 @@
       "userId": "2",
       "userName": "Marie Martin",
       "content": "Moi ! J'ai hâte !",
-      "timestamp": "2026-03-27T10:30:00.000Z"
+      "timestamp": "2026-03-27T10:30:00.000Z",
+      "seenBy": ["1"]
     }
   ]
 }
