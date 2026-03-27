@@ -389,5 +389,23 @@
       "logo": "https://picsum.photos/seed/logo5/100/100",
       "contactEmail": "contact@aiinstitute.com"
     }
+  ],
+  "messages": [
+    {
+      "id": "1",
+      "eventId": "1",
+      "userId": "1",
+      "userName": "Jean Dupont",
+      "content": "Qui vient à cet événement ?",
+      "timestamp": "2026-03-27T10:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "eventId": "1",
+      "userId": "2",
+      "userName": "Marie Martin",
+      "content": "Moi ! J'ai hâte !",
+      "timestamp": "2026-03-27T10:30:00.000Z"
+    }
   ]
 }
