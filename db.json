@@ -89,7 +89,8 @@
       },
       "bookingUrl": "https://example.com/book",
       "level": "intermediate",
-      "language": "fr"
+      "language": "fr",
+      "participants": []
     },
     {
       "id": "7",
@@ -112,7 +113,8 @@
       },
       "bookingUrl": "https://example.com/book",
       "level": "intermediate",
-      "language": "fr"
+      "language": "fr",
+      "participants": []
     },
     {
       "id": "wRbQPjF",
@@ -136,7 +138,8 @@
       },
       "bookingUrl": "https://example.com/book",
       "level": "intermediate",
-      "language": "fr"
+      "language": "fr",
+      "participants": []
     },
     {
       "id": "1",
@@ -157,7 +160,8 @@
       "coordinates": { "lat": 48.8566, "lng": 2.3522 },
       "bookingUrl": "https://example.com/book/1",
       "level": "intermediate",
-      "language": "fr"
+      "language": "fr",
+      "participants": []
     },
     {
       "id": "2",
@@ -177,7 +181,8 @@
       "coordinates": { "lat": 45.7640, "lng": 4.8357 },
       "bookingUrl": "https://example.com/book/2",
       "level": "beginner",
-      "language": "fr"
+      "language": "fr",
+      "participants": []
     },
     {
       "id": "3",
@@ -198,7 +203,8 @@
       "coordinates": { "lat": 43.2965, "lng": 5.3698 },
       "bookingUrl": "https://example.com/book/3",
       "level": "advanced",
-      "language": "en"
+      "language": "en",
+      "participants": []
     },
     {
       "id": "4",
@@ -219,7 +225,8 @@
       "coordinates": { "lat": 48.8534, "lng": 2.3708 },
       "bookingUrl": "https://example.com/book/4",
       "level": "beginner",
-      "language": "fr"
+      "language": "fr",
+      "participants": []
     },
     {
       "id": "5",
@@ -240,7 +247,8 @@
       "coordinates": { "lat": 48.8924, "lng": 2.2360 },
       "bookingUrl": "https://example.com/book/5",
       "level": "advanced",
-      "language": "en"
+      "language": "en",
+      "participants": []
     },
     {
       "id": "QgCX3mX",
@@ -408,6 +416,19 @@
       "content": "Moi ! J'ai hâte !",
       "timestamp": "2026-03-27T10:30:00.000Z",
       "seenBy": ["1"]
+    }
+  ],
+  "registrations": [
+    {
+      "id": "reg_1",
+      "eventId": "1",
+      "userId": "1",
+      "userName": "Jean Dupont",
+      "userEmail": "jean@example.com",
+      "status": "pending",
+      "paymentStatus": "pending",
+      "paymentLink": null,
+      "createdAt": "2024-12-01T10:00:00Z"
     }
   ]
 }
