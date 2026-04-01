@@ -4,12 +4,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
+import nodemailer from "nodemailer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const server = jsonServer.create();
 const router = jsonServer.router(path.join(__dirname, "db.json"));
+const db = router.db;
 const middlewares = jsonServer.defaults();
 
 server.use(
@@ -29,7 +31,6 @@ server.options("*", (req, res) => {
 
 server.post("/auth/login", (req, res) => {
     const { email, password } = req.body;
-    const db = router.db;
     const users = db.get("users").value();
 
     const user = users.find(u => u.email === email && u.password === password);
@@ -54,7 +55,6 @@ server.post("/auth/login", (req, res) => {
 
 server.post("/auth/register", (req, res) => {
     const { email, password, name } = req.body;
-    const db = router.db;
     const users = db.get("users").value();
 
     const existingUser = users.find(u => u.email === email);
@@ -118,7 +118,6 @@ const io = new Server(httpServer, {
 const messagesByEvent = new Map()
 
 const loadMessagesFromDb = () => {
-    const db = router.db;
     const messages = db.get("messages").value() || [];
     messages.forEach(msg => {
         const eventKey = String(msg.eventId);
@@ -179,7 +178,6 @@ io.on('connection', (socket) => {
             messagesByEvent.get(eventKey).shift();
         }
 
-        const db = router.db;
         db.get("messages").push(newMessage).write();
 
         io.to(eventKey).emit('message', newMessage);
@@ -208,10 +206,81 @@ io.on('connection', (socket) => {
         io.to(eventKey).emit("seen", { messageIds, userId });
     });
 
+    socket.on("admin_reply", async (payload) => {
+        const { eventId, content, userId, type, paymentLink } = payload;
+
+        const eventKey = String(eventId);
+
+        const newMessage = {
+            id: Date.now().toString(),
+            eventId: eventKey,
+            userId: "admin",
+            userName: "Admin",
+            content,
+            type: type || "chat",
+            seenBy: [],
+            timestamp: new Date().toISOString()
+        };
+
+        if (!messagesByEvent.has(eventKey)) {
+            messagesByEvent.set(eventKey, []);
+        }
+        messagesByEvent.get(eventKey).push(newMessage);
+
+        db.get("messages").push(newMessage).write();
+
+        if (type !== "payment") {
+            io.to(eventKey).emit("message", newMessage);
+        }
+
+        const user = db.get("users").find({ id: Number(userId) }).value();
+        const email = user?.email;
+
+        if (type === "payment" && email && paymentLink) {
+            await sendEmail({
+                to: email,
+                subject: "Paiement requis",
+                text: `Veuillez payer ici : ${paymentLink}`
+            });
+        }
+
+        if (type === "info" && email) {
+            await sendEmail({
+                to: email,
+                subject: "Information concernant votre demande",
+                text: content
+            });
+        }
+
+        console.log("Admin reply envoyé:", newMessage);
+    });
+
     socket.on('disconnect', () => {
         console.log(`Client déconnecté (socket ${socket.id}) - event: ${currentEventId}`);
     });
 });
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: "YOUR_EMAIL@gmail.com",
+        pass: "APP_PASSWORD",
+    },
+});
+
+const sendEmail = async ({ to, subject, text }) => {
+    try {
+        await transporter.sendMail({
+            from: "Event Platform",
+            to,
+            subject,
+            text,
+        });
+        console.log("Email envoyé à", to);
+    } catch (err) {
+        console.error("Erreur email:", err);
+    }
+};
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {

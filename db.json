@@ -5,6 +5,18 @@
       "email": "user@example.com",
       "password": "password",
       "name": "User Name"
+    },
+    {
+      "id": 2,
+      "email": "test@example.com",
+      "password": "password",
+      "name": "User test"
+    },
+    {
+      "id": 3,
+      "email": "admin@admin.com",
+      "password": "password",
+      "name": "Admin Name"
     }
   ],
   "tokens": [],
@@ -78,7 +90,7 @@
       "price": 50,
       "status": "published",
       "priority": "1",
-      "imageUrl": "https://example.com/image.jpg",
+      "imageUrl": "https://picsum.photos/seed/event1/400/300",
       "categoryId": "1",
       "capacity": 100,
       "availableSeats": 45,
@@ -87,7 +99,7 @@
         "lat": 48.8566,
         "lng": 2.3522
       },
-      "bookingUrl": "https://example.com/book",
+      "bookingUrl": "https://picsum.photos/seed/event1/400/300",
       "level": "intermediate",
       "language": "fr",
       "participants": []
@@ -102,7 +114,7 @@
       "priceType": "free",
       "status": "draft",
       "priority": "2",
-      "imageUrl": "https://example.com/image.jpg",
+      "imageUrl": "https://picsum.photos/seed/event1/400/300",
       "categoryId": "1",
       "capacity": 100,
       "availableSeats": 45,
@@ -111,7 +123,7 @@
         "lat": 48.8566,
         "lng": 2.3522
       },
-      "bookingUrl": "https://example.com/book",
+      "bookingUrl": "https://picsum.photos/seed/event1/400/300",
       "level": "intermediate",
       "language": "fr",
       "participants": []
@@ -127,7 +139,7 @@
       "price": 21,
       "status": "draft",
       "priority": "1",
-      "imageUrl": "https://example.com/image.jpg",
+      "imageUrl": "https://picsum.photos/seed/event1/400/300",
       "categoryId": "1",
       "capacity": 100,
       "availableSeats": 45,
@@ -136,13 +148,13 @@
         "lat": 48.8566,
         "lng": 2.3522
       },
-      "bookingUrl": "https://example.com/book",
+      "bookingUrl": "https://picsum.photos/seed/event1/400/300",
       "level": "intermediate",
       "language": "fr",
       "participants": [
         {
           "id": "part_001",
-          "userId": "user_001",
+          "userId": "1",
           "userName": "Jean Dupont",
           "userEmail": "jean.dupont@email.com",
           "userPhone": "+33 6 12 34 56 78",
@@ -155,7 +167,7 @@
         },
         {
           "id": "part_002",
-          "userId": "user_002",
+          "userId": "2",
           "userName": "Marie Martin",
           "userEmail": "marie.martin@email.com",
           "userPhone": "+33 6 98 76 54 32",
@@ -168,7 +180,7 @@
         },
         {
           "id": "part_003",
-          "userId": "user_003",
+          "userId": "3",
           "userName": "Pierre Durand",
           "userEmail": "pierre.durand@email.com",
           "userPhone": "+33 7 45 67 89 01",
@@ -181,7 +193,7 @@
         },
         {
           "id": "part_004",
-          "userId": "user_004",
+          "userId": "1",
           "userName": "Sophie Lambert",
           "userEmail": "sophie.lambert@email.com",
           "userPhone": "+33 6 23 45 67 89",
@@ -194,7 +206,7 @@
         },
         {
           "id": "part_005",
-          "userId": "user_005",
+          "userId": "2",
           "userName": "Thomas Bernard",
           "userEmail": "thomas.bernard@email.com",
           "userPhone": "+33 7 89 01 23 45",
@@ -207,7 +219,7 @@
         },
         {
           "id": "part_006",
-          "userId": "user_006",
+          "userId": "3",
           "userName": "Isabelle Robert",
           "userEmail": "isabelle.robert@email.com",
           "userPhone": "+33 6 45 67 89 01",
@@ -220,7 +232,7 @@
         },
         {
           "id": "part_007",
-          "userId": "user_007",
+          "userId": "2",
           "userName": "Nicolas Petit",
           "userEmail": "nicolas.petit@email.com",
           "userPhone": "+33 7 12 34 56 78",
@@ -233,7 +245,7 @@
         },
         {
           "id": "part_008",
-          "userId": "user_008",
+          "userId": "3",
           "userName": "Camille Moreau",
           "userEmail": "camille.moreau@email.com",
           "userPhone": "+33 6 78 90 12 34",
@@ -246,7 +258,7 @@
         },
         {
           "id": "part_009",
-          "userId": "user_009",
+          "userId": "2",
           "userName": "Lucas Garcia",
           "userEmail": "lucas.garcia@email.com",
           "userPhone": "+33 7 34 56 78 90",
@@ -259,7 +271,7 @@
         },
         {
           "id": "part_010",
-          "userId": "user_010",
+          "userId": "1",
           "userName": "Emma Lefebvre",
           "userEmail": "emma.lefebvre@email.com",
           "userPhone": "+33 6 90 12 34 56",
@@ -289,7 +301,7 @@
       "availableSeats": 45,
       "organizerId": "1",
       "coordinates": { "lat": 48.8566, "lng": 2.3522 },
-      "bookingUrl": "https://example.com/book/1",
+      "bookingUrl": "https://picsum.photos/seed/event1/400/300",
       "level": "intermediate",
       "language": "fr",
       "participants": [
@@ -308,7 +320,7 @@
         },
         {
           "id": "part_002",
-          "userId": "user_002",
+          "userId": "2",
           "userName": "Marie Martin",
           "userEmail": "marie.martin@email.com",
           "userPhone": "+33 6 98 76 54 32",
@@ -321,7 +333,7 @@
         },
         {
           "id": "part_003",
-          "userId": "user_003",
+          "userId": "3",
           "userName": "Pierre Durand",
           "userEmail": "pierre.durand@email.com",
           "userPhone": "+33 7 45 67 89 01",
@@ -334,7 +346,7 @@
         },
         {
           "id": "part_004",
-          "userId": "user_004",
+          "userId": "2",
           "userName": "Sophie Lambert",
           "userEmail": "sophie.lambert@email.com",
           "userPhone": "+33 6 23 45 67 89",
@@ -347,7 +359,7 @@
         },
         {
           "id": "part_005",
-          "userId": "user_005",
+          "userId": "1",
           "userName": "Thomas Bernard",
           "userEmail": "thomas.bernard@email.com",
           "userPhone": "+33 7 89 01 23 45",
@@ -360,7 +372,7 @@
         },
         {
           "id": "part_006",
-          "userId": "user_006",
+          "userId": "2",
           "userName": "Isabelle Robert",
           "userEmail": "isabelle.robert@email.com",
           "userPhone": "+33 6 45 67 89 01",
@@ -373,7 +385,7 @@
         },
         {
           "id": "part_007",
-          "userId": "user_007",
+          "userId": "1",
           "userName": "Nicolas Petit",
           "userEmail": "nicolas.petit@email.com",
           "userPhone": "+33 7 12 34 56 78",
@@ -386,7 +398,7 @@
         },
         {
           "id": "part_008",
-          "userId": "user_008",
+          "userId": "3",
           "userName": "Camille Moreau",
           "userEmail": "camille.moreau@email.com",
           "userPhone": "+33 6 78 90 12 34",
@@ -399,7 +411,7 @@
         },
         {
           "id": "part_009",
-          "userId": "user_009",
+          "userId": "1",
           "userName": "Lucas Garcia",
           "userEmail": "lucas.garcia@email.com",
           "userPhone": "+33 7 34 56 78 90",
@@ -412,7 +424,7 @@
         },
         {
           "id": "part_010",
-          "userId": "user_010",
+          "userId": "2",
           "userName": "Emma Lefebvre",
           "userEmail": "emma.lefebvre@email.com",
           "userPhone": "+33 6 90 12 34 56",
@@ -441,7 +453,7 @@
       "availableSeats": 120,
       "organizerId": "5",
       "coordinates": { "lat": 45.7640, "lng": 4.8357 },
-      "bookingUrl": "https://example.com/book/2",
+      "bookingUrl": "https://picsum.photos/seed/event2/400/300",
       "level": "beginner",
       "language": "fr",
       "participants": []
@@ -463,7 +475,7 @@
       "availableSeats": 30,
       "organizerId": "2",
       "coordinates": { "lat": 43.2965, "lng": 5.3698 },
-      "bookingUrl": "https://example.com/book/3",
+      "bookingUrl": "https://picsum.photos/seed/event3/400/300",
       "level": "advanced",
       "language": "en",
       "participants": []
@@ -485,7 +497,7 @@
       "availableSeats": 10,
       "organizerId": "3",
       "coordinates": { "lat": 48.8534, "lng": 2.3708 },
-      "bookingUrl": "https://example.com/book/4",
+      "bookingUrl": "https://picsum.photos/seed/event4/400/300",
       "level": "beginner",
       "language": "fr",
       "participants": []
@@ -507,7 +519,7 @@
       "availableSeats": 200,
       "organizerId": "4",
       "coordinates": { "lat": 48.8924, "lng": 2.2360 },
-      "bookingUrl": "https://example.com/book/5",
+      "bookingUrl": "https://picsum.photos/seed/event5/400/300",
       "level": "advanced",
       "language": "en",
       "participants": []
@@ -523,7 +535,7 @@
       "price": 23,
       "status": "published",
       "priority": "1",
-      "imageUrl": "https://example.com/image.jpg",
+      "imageUrl": "https://picsum.photos/seed/event1/400/300",
       "categoryId": "1",
       "capacity": 100,
       "availableSeats": 45,
@@ -532,7 +544,7 @@
         "lat": 48.8566,
         "lng": 2.3522
       },
-      "bookingUrl": "https://example.com/book",
+      "bookingUrl": "https://picsum.photos/seed/event1/400/300",
       "level": "intermediate",
       "language": "fr"
     }
@@ -565,11 +577,11 @@
       "media": [
         {
           "type": "video",
-          "url": "https://youtube.com/example"
+          "url": "https://picsum.photos/seed/event1/400/300"
         },
         {
           "type": "photo",
-          "url": "https://example.com/photo1.jpg"
+          "url": "https://picsum.photos/seed/event1/400/300"
         }
       ]
     },

@@ -12,6 +12,7 @@
     "cors": "^2.8.6",
     "json-server": "^0.17.4",
     "json-server-auth": "^2.1.0",
+    "nodemailer": "^8.0.4",
     "socket.io": "^4.8.3",
     "ws": "^8.20.0"
   },
