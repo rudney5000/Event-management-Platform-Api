@@ -7,7 +7,6 @@ import { createServer } from "node:http";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
-
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,26 +16,63 @@ const router = jsonServer.router(path.join(__dirname, "db.json"));
 const db = router.db;
 const middlewares = jsonServer.defaults();
 
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+const sendEmail = async ({ to, subject, text, html }) => {
+    if (!to) return;
+    try {
+        await transporter.sendMail({
+            from: `"Event Platform" <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            text: text ?? "",
+            html: html ?? text ?? "",
+        });
+        console.log("Email envoyé à", to);
+    } catch (err) {
+        console.error("Erreur email:", err);
+    }
+};
+
+function getAdminEmailForEvent(event) {
+    if (process.env.ADMIN_EMAIL) return process.env.ADMIN_EMAIL;
+    let organizers = [];
+    try {
+        const v = db.get("organizers").value();
+        organizers = Array.isArray(v) ? v : [];
+    } catch {
+        organizers = [];
+    }
+    const org = organizers.find((o) => String(o.id) === String(event.organizerId));
+    return org?.email ?? null;
+}
+
 server.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
+    cors({
+        origin: "*",
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+    })
 );
 
 server.use(middlewares);
 server.use(jsonServer.bodyParser);
 
 server.options("*", (req, res) => {
-  res.sendStatus(204);
+    res.sendStatus(204);
 });
 
 server.post("/auth/login", (req, res) => {
     const { email, password } = req.body;
     const users = db.get("users").value();
 
-    const user = users.find(u => u.email === email && u.password === password);
+    const user = users.find((u) => u.email === email && u.password === password);
 
     if (user) {
         const accessToken = "jwt-token-" + Date.now();
@@ -48,17 +84,42 @@ server.post("/auth/login", (req, res) => {
             user: {
                 id: user.id.toString(),
                 email: user.email,
-                name: user.name || "User"
-            }
+                name: user.name || "User",
+            },
         });
     } else {
         res.status(401).json({ message: "Invalid credentials" });
     }
 });
 
-server.post("/auth/register", async (req, res) => {
+server.post("/auth/register", (req, res) => {
     try {
-        const { eventId, userName, userEmail, userPhone, numberOfTickets, userId } = req.body;
+        const { email, password, name } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email et mot de passe requis" });
+        }
+        const users = db.get("users").value();
+        if (users.some((u) => u.email === email)) {
+            return res.status(400).json({ message: "User already exists" });
+        }
+        const id = Math.max(0, ...users.map((u) => Number(u.id) || 0)) + 1;
+        const newUser = { id, email, password, name: name || "" };
+        db.get("users").push(newUser).write();
+        res.status(201).json({
+            id: String(id),
+            email: newUser.email,
+            name: newUser.name,
+        });
+    } catch (e) {
+        console.error("Signup error:", e);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+server.post("/api/registrations", async (req, res) => {
+    try {
+        const { eventId, userName, userEmail, userPhone, numberOfTickets, userId } =
+            req.body;
 
         const event = db.get("events").find({ id: eventId }).value();
 
@@ -80,7 +141,9 @@ server.post("/auth/register", async (req, res) => {
             numberOfTickets: ticketsCount,
             status: isPaidEvent ? "pending" : "confirmed",
             paymentStatus: isPaidEvent ? "pending" : "free",
-            paymentLink: isPaidEvent ? `${process.env.FRONTEND_URL}/payment/${Date.now()}` : null,
+            paymentLink: isPaidEvent
+                ? `${process.env.FRONTEND_URL}/payment/${Date.now()}`
+                : null,
             createdAt: new Date().toISOString(),
         };
 
@@ -105,9 +168,35 @@ server.post("/auth/register", async (req, res) => {
             .find({ id: eventId })
             .assign({
                 participants: eventParticipants,
-                availableSeats: event.availableSeats - ticketsCount
+                availableSeats: event.availableSeats - ticketsCount,
             })
             .write();
+
+        const adminEmail = getAdminEmailForEvent(event);
+        if (adminEmail) {
+            const adminHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+          <h2 style="color: #f5c518;">Nouvelle inscription</h2>
+          <p><strong>${userName}</strong> vient de s'inscrire à <strong>${event.title}</strong>.</p>
+          <ul>
+            <li>Email : ${userEmail}</li>
+            <li>Téléphone : ${userPhone}</li>
+            <li>Places : ${ticketsCount}</li>
+            <li>Statut paiement : ${isPaidEvent ? "En attente" : "Gratuit"}</li>
+          </ul>
+          ${
+                isPaidEvent && registration.paymentLink
+                    ? `<p><a href="${registration.paymentLink}">Lien de paiement participant</a></p>`
+                    : ""
+            }
+        </div>`;
+            await sendEmail({
+                to: adminEmail,
+                subject: `[Admin] Nouvelle inscription — ${event.title}`,
+                text: `Inscription: ${userName} (${userEmail}) — ${event.title}. Places: ${ticketsCount}.`,
+                html: adminHtml,
+            });
+        }
 
         if (isPaidEvent) {
             const emailHtml = `
@@ -118,15 +207,14 @@ server.post("/auth/register", async (req, res) => {
                     
                     <div style="background-color: #1f1f1f; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #333;">
                         <h3 style="color: #f5c518; margin-bottom: 15px;">Détails de l'événement :</h3>
-                        <p><strong>📅 Date :</strong> ${new Date(event.date).toLocaleDateString('fr-FR')}</p>
+                        <p><strong>📅 Date :</strong> ${new Date(event.date).toLocaleDateString("fr-FR")}</p>
                         <p><strong>📍 Lieu :</strong> ${event.address || event.cityId}</p>
                         <p><strong>🎫 Nombre de places :</strong> ${ticketsCount}</p>
                         <p><strong>💰 Total à payer :</strong> ${totalPrice} €</p>
                     </div>
                     
                     <div style="background-color: #f5c51820; padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #f5c518;">
-                        <p><strong>📌 Action requise :</strong> Un lien de paiement vous sera envoyé sous 24h.</p>
-                        <p>Vous recevrez un email séparé pour finaliser votre paiement.</p>
+                        <p><strong>📌 Action requise :</strong> Utilisez le lien ci-dessous pour payer.</p>
                     </div>
                     
                     <p>À très bientôt !</p>
@@ -167,7 +255,6 @@ server.post("/auth/register", async (req, res) => {
                 text: `Paiement requis pour ${event.title}. Montant: ${totalPrice} €. Lien: ${registration.paymentLink}`,
                 html: paymentHtml,
             });
-
         } else {
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -177,7 +264,7 @@ server.post("/auth/register", async (req, res) => {
                     
                     <div style="background-color: #1f1f1f; padding: 20px; border-radius: 10px; margin: 20px 0;">
                         <h3 style="color: #f5c518;">Détails de l'événement :</h3>
-                        <p><strong>📅 Date :</strong> ${new Date(event.date).toLocaleDateString('fr-FR')}</p>
+                        <p><strong>📅 Date :</strong> ${new Date(event.date).toLocaleDateString("fr-FR")}</p>
                         <p><strong>📍 Lieu :</strong> ${event.address || event.cityId}</p>
                         <p><strong>🎫 Nombre de places :</strong> ${ticketsCount}</p>
                         <p><strong>🎟️ Prix :</strong> Gratuit</p>
@@ -204,7 +291,6 @@ server.post("/auth/register", async (req, res) => {
             ...registration,
             paymentRequired: isPaidEvent,
         });
-
     } catch (error) {
         console.error("Registration error:", error);
         res.status(500).json({ error: "Internal server error" });
@@ -223,11 +309,10 @@ server.post("/auth/refresh", (req, res) => {
         user: {
             id: "1",
             email: "user@example.com",
-            name: "User"
-        }
+            name: "User",
+        },
     });
 });
-
 
 server.use("/api", router);
 
@@ -237,35 +322,35 @@ const io = new Server(httpServer, {
         origin: "*",
         methods: ["GET", "POST"],
         allowedHeaders: ["Content-Type", "Authorization"],
-        credentials: true
-    }
+        credentials: true,
+    },
 });
 
-const messagesByEvent = new Map()
+const messagesByEvent = new Map();
 
 const loadMessagesFromDb = () => {
     const messages = db.get("messages").value() || [];
-    messages.forEach(msg => {
+    messages.forEach((msg) => {
         const eventKey = String(msg.eventId);
-        if(!messagesByEvent.has(eventKey)) {
+        if (!messagesByEvent.has(eventKey)) {
             messagesByEvent.set(eventKey, []);
         }
-        messagesByEvent.get(eventKey).push({...msg, eventId: eventKey});
+        messagesByEvent.get(eventKey).push({ ...msg, eventId: eventKey });
     });
 };
 
 loadMessagesFromDb();
 
-io.on('connection', (socket) => {
+io.on("connection", (socket) => {
     console.log(`Nouvelle connexion Socket.IO - ID: ${socket.id}`);
 
     let currentEventId = null;
     let currentUserId = null;
 
-    socket.on('join', (payload) => {
+    socket.on("join", (payload) => {
         const { eventId, userId, userName } = payload;
 
-        const eventKey = String(eventId)
+        const eventKey = String(eventId);
 
         currentEventId = eventKey;
         currentUserId = userId;
@@ -274,12 +359,12 @@ io.on('connection', (socket) => {
 
         const history = messagesByEvent.get(eventKey) || [];
 
-        socket.emit('history', history);
+        socket.emit("history", history);
 
         console.log(`User ${userId} (${userName}) joined event ${eventKey}`);
     });
 
-    socket.on('message', (payload) => {
+    socket.on("message", (payload) => {
         const { eventId, content, userId, userName, userAvatar } = payload;
 
         const eventKey = String(eventId);
@@ -292,7 +377,7 @@ io.on('connection', (socket) => {
             userAvatar,
             content,
             seenBy: [],
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         };
 
         if (!messagesByEvent.has(eventKey)) {
@@ -306,7 +391,7 @@ io.on('connection', (socket) => {
 
         db.get("messages").push(newMessage).write();
 
-        io.to(eventKey).emit('message', newMessage);
+        io.to(eventKey).emit("message", newMessage);
     });
 
     socket.on("seen", ({ eventId, messageIds, userId }) => {
@@ -332,9 +417,9 @@ io.on('connection', (socket) => {
         io.to(eventKey).emit("seen", { messageIds, userId });
     });
 
-
     socket.on("admin_reply", async (payload) => {
-        const { eventId, content, userId, userName, userEmail, type, paymentLink } = payload;
+        const { eventId, content, userId, userName, userEmail, type, paymentLink } =
+            payload;
         const eventKey = String(eventId);
 
         const event = db.get("events").find({ id: eventKey }).value();
@@ -347,7 +432,7 @@ io.on('connection', (socket) => {
             content,
             type: type || "chat",
             seenBy: [],
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         };
 
         if (!messagesByEvent.has(eventKey)) {
@@ -385,7 +470,6 @@ io.on('connection', (socket) => {
             </div>
         `;
             emailText = `Paiement requis: ${paymentLink}\n\nMessage: ${content}`;
-
         } else if (type === "info") {
             emailSubject = `ℹ️ Information importante - ${event?.title || "Événement"}`;
             emailHtml = `
@@ -408,7 +492,6 @@ io.on('connection', (socket) => {
             </div>
         `;
             emailText = `Message de l'administrateur: ${content}`;
-
         } else {
             emailSubject = `💬 Réponse de l'administrateur - ${event?.title || "Événement"}`;
             emailHtml = `
@@ -444,36 +527,14 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
         console.log(`Client déconnecté (socket ${socket.id}) - event: ${currentEventId}`);
     });
 });
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
-const sendEmail = async ({ to, subject, text }) => {
-    try {
-        await transporter.sendMail({
-            from: "Event Platform",
-            to,
-            subject,
-            text,
-        });
-        console.log("Email envoyé à", to);
-    } catch (err) {
-        console.error("Erreur email:", err);
-    }
-};
-
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
-  console.log(`WebSocket server running on ws:localhost:${PORT}`)
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket ready for a chat`)
+    console.log(`WebSocket server running on ws:localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`WebSocket ready for a chat`);
 });
