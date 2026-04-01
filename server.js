@@ -56,36 +56,159 @@ server.post("/auth/login", (req, res) => {
     }
 });
 
-server.post("/auth/register", (req, res) => {
-    const { email, password, name } = req.body;
-    const users = db.get("users").value();
+server.post("/auth/register", async (req, res) => {
+    try {
+        const { eventId, userName, userEmail, userPhone, numberOfTickets, userId } = req.body;
 
-    const existingUser = users.find(u => u.email === email);
-    if (existingUser) {
-        return res.status(400).json({ message: "User already exists" });
-    }
+        const event = db.get("events").find({ id: eventId }).value();
 
-    const newUser = {
-        id: users.length + 1,
-        email,
-        password,
-        name: name || "User"
-    };
-
-    db.get("users").push(newUser).write();
-
-    const accessToken = "jwt-token-" + Date.now();
-    const refreshToken = "refresh-token-" + Date.now();
-
-    res.status(201).json({
-        accessToken,
-        refreshToken,
-        user: {
-            id: newUser.id.toString(),
-            email: newUser.email,
-            name: newUser.name
+        if (!event) {
+            return res.status(404).json({ error: "Event not found" });
         }
-    });
+
+        const isPaidEvent = event.price > 0;
+        const ticketsCount = numberOfTickets || 1;
+        const totalPrice = event.price * ticketsCount;
+
+        const registration = {
+            id: `reg_${Date.now()}`,
+            eventId,
+            userId,
+            userName,
+            userEmail,
+            userPhone,
+            numberOfTickets: ticketsCount,
+            status: isPaidEvent ? "pending" : "confirmed",
+            paymentStatus: isPaidEvent ? "pending" : "free",
+            paymentLink: isPaidEvent ? `${process.env.FRONTEND_URL}/payment/${Date.now()}` : null,
+            createdAt: new Date().toISOString(),
+        };
+
+        db.get("registrations").push(registration).write();
+
+        const participant = {
+            id: `part_${Date.now()}`,
+            userId,
+            userName,
+            userEmail,
+            userPhone,
+            numberOfTickets: ticketsCount,
+            registrationDate: new Date().toISOString(),
+            status: isPaidEvent ? "pending" : "confirmed",
+            paymentStatus: isPaidEvent ? "pending" : "free",
+        };
+
+        const eventParticipants = event.participants || [];
+        eventParticipants.push(participant);
+
+        db.get("events")
+            .find({ id: eventId })
+            .assign({
+                participants: eventParticipants,
+                availableSeats: event.availableSeats - ticketsCount
+            })
+            .write();
+
+        if (isPaidEvent) {
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #f5c518;">✅ Inscription confirmée - ${event.title}</h2>
+                    <p>Bonjour ${userName},</p>
+                    <p>Votre inscription a bien été enregistrée avec succès !</p>
+                    
+                    <div style="background-color: #1f1f1f; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #333;">
+                        <h3 style="color: #f5c518; margin-bottom: 15px;">Détails de l'événement :</h3>
+                        <p><strong>📅 Date :</strong> ${new Date(event.date).toLocaleDateString('fr-FR')}</p>
+                        <p><strong>📍 Lieu :</strong> ${event.address || event.cityId}</p>
+                        <p><strong>🎫 Nombre de places :</strong> ${ticketsCount}</p>
+                        <p><strong>💰 Total à payer :</strong> ${totalPrice} €</p>
+                    </div>
+                    
+                    <div style="background-color: #f5c51820; padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #f5c518;">
+                        <p><strong>📌 Action requise :</strong> Un lien de paiement vous sera envoyé sous 24h.</p>
+                        <p>Vous recevrez un email séparé pour finaliser votre paiement.</p>
+                    </div>
+                    
+                    <p>À très bientôt !</p>
+                    <p style="color: #666;">L'équipe organisatrice</p>
+                </div>
+            `;
+
+            await sendEmail({
+                to: userEmail,
+                subject: `✅ Inscription confirmée - ${event.title}`,
+                text: `Votre inscription pour ${event.title} a été enregistrée. Total à payer: ${totalPrice} €`,
+                html: emailHtml,
+            });
+
+            const paymentHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #f5c518;">💳 Paiement requis - ${event.title}</h2>
+                    <p>Bonjour ${userName},</p>
+                    <p>Pour finaliser votre inscription, veuillez procéder au paiement :</p>
+                    
+                    <div style="background-color: #1f1f1f; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
+                        <p style="font-size: 24px; color: #f5c518; margin-bottom: 20px;"><strong>${totalPrice} €</strong></p>
+                        <a href="${registration.paymentLink}" 
+                           style="display: inline-block; background-color: #f5c518; color: black; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                            💳 Payer maintenant
+                        </a>
+                        <p style="margin-top: 15px; font-size: 12px; color: #666;">Ce lien est valable 24h</p>
+                    </div>
+                    
+                    <p>Une fois le paiement effectué, vous recevrez vos billets par email.</p>
+                    <p>L'équipe organisatrice</p>
+                </div>
+            `;
+
+            await sendEmail({
+                to: userEmail,
+                subject: `💳 Paiement requis - ${event.title}`,
+                text: `Paiement requis pour ${event.title}. Montant: ${totalPrice} €. Lien: ${registration.paymentLink}`,
+                html: paymentHtml,
+            });
+
+        } else {
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #f5c518;">✅ Inscription confirmée !</h2>
+                    <p>Bonjour ${userName},</p>
+                    <p>Votre inscription pour l'événement <strong>${event.title}</strong> a bien été enregistrée avec succès.</p>
+                    
+                    <div style="background-color: #1f1f1f; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <h3 style="color: #f5c518;">Détails de l'événement :</h3>
+                        <p><strong>📅 Date :</strong> ${new Date(event.date).toLocaleDateString('fr-FR')}</p>
+                        <p><strong>📍 Lieu :</strong> ${event.address || event.cityId}</p>
+                        <p><strong>🎫 Nombre de places :</strong> ${ticketsCount}</p>
+                        <p><strong>🎟️ Prix :</strong> Gratuit</p>
+                    </div>
+                    
+                    <div style="background-color: #10b98120; padding: 15px; border-radius: 10px; margin: 20px 0;">
+                        <p>✅ Présentez cet email à l'entrée de l'événement.</p>
+                    </div>
+                    
+                    <p>À très bientôt !</p>
+                    <p style="color: #666;">L'équipe organisatrice</p>
+                </div>
+            `;
+
+            await sendEmail({
+                to: userEmail,
+                subject: `✅ Inscription confirmée - ${event.title}`,
+                text: `Votre inscription pour ${event.title} a été confirmée.`,
+                html: emailHtml,
+            });
+        }
+
+        res.status(201).json({
+            ...registration,
+            paymentRequired: isPaidEvent,
+        });
+
+    } catch (error) {
+        console.error("Registration error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 server.post("/auth/refresh", (req, res) => {
@@ -209,10 +332,12 @@ io.on('connection', (socket) => {
         io.to(eventKey).emit("seen", { messageIds, userId });
     });
 
-    socket.on("admin_reply", async (payload) => {
-        const { eventId, content, userId, type, paymentLink } = payload;
 
+    socket.on("admin_reply", async (payload) => {
+        const { eventId, content, userId, userName, userEmail, type, paymentLink } = payload;
         const eventKey = String(eventId);
+
+        const event = db.get("events").find({ id: eventKey }).value();
 
         const newMessage = {
             id: Date.now().toString(),
@@ -229,33 +354,94 @@ io.on('connection', (socket) => {
             messagesByEvent.set(eventKey, []);
         }
         messagesByEvent.get(eventKey).push(newMessage);
-
         db.get("messages").push(newMessage).write();
+        io.to(eventKey).emit("message", newMessage);
 
-        if (type !== "payment") {
-            io.to(eventKey).emit("message", newMessage);
+        let emailSubject = "";
+        let emailHtml = "";
+        let emailText = "";
+
+        if (type === "payment") {
+            emailSubject = `💳 Paiement requis - ${event?.title || "Événement"}`;
+            emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #f5c518;">💳 Paiement requis</h2>
+                <p>Bonjour ${userName},</p>
+                <p>Pour finaliser votre inscription, veuillez effectuer le paiement :</p>
+                
+                <div style="background-color: #1f1f1f; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
+                    <a href="${paymentLink}" style="display: inline-block; background-color: #f5c518; color: black; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                        💳 Payer maintenant
+                    </a>
+                </div>
+                
+                <div style="background-color: #333; padding: 15px; border-radius: 10px; margin: 20px 0;">
+                    <p style="color: #f5c518; margin-bottom: 10px;"><strong>Message de l'administrateur :</strong></p>
+                    <p>${content}</p>
+                </div>
+                
+                <p>À très bientôt !</p>
+                <p style="color: #666;">L'équipe organisatrice</p>
+            </div>
+        `;
+            emailText = `Paiement requis: ${paymentLink}\n\nMessage: ${content}`;
+
+        } else if (type === "info") {
+            emailSubject = `ℹ️ Information importante - ${event?.title || "Événement"}`;
+            emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #f5c518;">ℹ️ Information importante</h2>
+                <p>Bonjour ${userName},</p>
+                
+                <div style="background-color: #333; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <p style="color: #f5c518; margin-bottom: 10px;"><strong>Message de l'administrateur :</strong></p>
+                    <p>${content}</p>
+                </div>
+                
+                <a href="${process.env.FRONTEND_URL}/api/events/${eventKey}" 
+                   style="display: inline-block; background-color: #f5c518; color: black; padding: 10px 20px; text-decoration: none; border-radius: 8px;">
+                    Voir l'événement
+                </a>
+                
+                <p style="margin-top: 20px;">Cordialement,</p>
+                <p style="color: #666;">L'équipe organisatrice</p>
+            </div>
+        `;
+            emailText = `Message de l'administrateur: ${content}`;
+
+        } else {
+            emailSubject = `💬 Réponse de l'administrateur - ${event?.title || "Événement"}`;
+            emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #f5c518;">💬 Réponse de l'administrateur</h2>
+                <p>Bonjour ${userName},</p>
+                
+                <div style="background-color: #333; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <p style="color: #f5c518; margin-bottom: 10px;"><strong>Réponse :</strong></p>
+                    <p>${content}</p>
+                </div>
+                
+                <a href="${process.env.FRONTEND_URL}/api/events/${eventKey}" 
+                   style="display: inline-block; background-color: #f5c518; color: black; padding: 10px 20px; text-decoration: none; border-radius: 8px;">
+                    Voir la conversation
+                </a>
+                
+                <p style="margin-top: 20px;">Cordialement,</p>
+                <p style="color: #666;">L'équipe organisatrice</p>
+            </div>
+        `;
+            emailText = `Réponse: ${content}`;
         }
 
-        const user = db.get("users").find({ id: Number(userId) }).value();
-        const email = user?.email;
-
-        if (type === "payment" && email && paymentLink) {
+        if (userEmail) {
             await sendEmail({
-                to: email,
-                subject: "Paiement requis",
-                text: `Veuillez payer ici : ${paymentLink}`
+                to: userEmail,
+                subject: emailSubject,
+                text: emailText,
+                html: emailHtml,
             });
+            console.log(`✅ Email envoyé à ${userEmail} (type: ${type})`);
         }
-
-        if (type === "info" && email) {
-            await sendEmail({
-                to: email,
-                subject: "Information concernant votre demande",
-                text: content
-            });
-        }
-
-        console.log("Admin reply envoyé:", newMessage);
     });
 
     socket.on('disconnect', () => {
