@@ -5,7 +5,10 @@ import { fileURLToPath } from "url";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 
+
+dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -263,8 +266,8 @@ io.on('connection', (socket) => {
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-        user: "YOUR_EMAIL@gmail.com",
-        pass: "APP_PASSWORD",
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
     },
 });
 
