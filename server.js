@@ -390,7 +390,7 @@ server.use("/api", router);
 const httpServer = createServer(server);
 const io = new Server(httpServer, {
     cors: {
-        origin: "*",
+        origin: "https://event-management-platform-gamma.vercel.app",
         methods: ["GET", "POST"],
         allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
