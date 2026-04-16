@@ -1,13 +1,11 @@
 import jsonServer from "json-server";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import crypto from "crypto";
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -58,22 +56,13 @@ function getAdminEmailForEvent(event) {
 server.use(
     cors({
         origin: "*",
-        credentials: true,
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
     })
 );
 
-server.use(cookieParser())
 server.use(middlewares);
 server.use(jsonServer.bodyParser);
-
-function generateTokens() {
-  const accessToken = crypto.randomBytes(32).toString('hex')
-  const refreshToken = crypto.randomBytes(64).toString('hex')
-
-  return { accessToken, refreshToken }
-}
 
 server.options("*", (req, res) => {
     res.sendStatus(204);
@@ -86,15 +75,8 @@ server.post("/auth/login", (req, res) => {
     const user = users.find((u) => u.email === email && u.password === password);
 
     if (user) {
-        const { accessToken, refreshToken } = generateTokens();
-
-        res.cookie('refreshToken', refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-          path: '/'
-        })
+        const accessToken = "jwt-token-" + Date.now();
+        const refreshToken = "refresh-token-" + Date.now();
 
         res.json({
             accessToken,
@@ -111,7 +93,6 @@ server.post("/auth/login", (req, res) => {
 });
 
 server.post("/auth/register", (req, res) => {
-
     try {
         const { email, password, name } = req.body;
         if (!email || !password) {
@@ -124,17 +105,6 @@ server.post("/auth/register", (req, res) => {
         const id = Math.max(0, ...users.map((u) => Number(u.id) || 0)) + 1;
         const newUser = { id, email, password, name: name || "" };
         db.get("users").push(newUser).write();
-
-        const { accessToken, refreshToken } = generateTokens();
-        
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-            path: '/'
-        });
-
         res.status(201).json({
             id: String(id),
             email: newUser.email,
@@ -328,60 +298,19 @@ server.post("/api/registrations", async (req, res) => {
 });
 
 server.post("/auth/refresh", (req, res) => {
-    const { refreshToken } = req.cookies.refreshToken;
+    const { refreshToken } = req.body;
 
-    if (!refreshToken) {
-        return res.status(401).json({ message: "No refresh token" });
-    }
-
-    if (!refreshToken.startsWith('refresh-token') && !refreshToken.match(/^[a-f0-9]{128}$/)) {
-        return res.status(401).json({ message: "Invalid refresh token" });
-    }
-
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens();
-    
-    res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/'
-    });
+    const accessToken = "jwt-token-" + Date.now();
+    const newRefreshToken = "refresh-token-" + Date.now();
 
     res.json({
-        accessToken
-    });
-});
-
-server.post("/auth/logout", (req, res) => {
-    res.clearCookie('refreshToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/'
-    });
-    res.json({ message: "Logged out" });
-});
-
-function verifyAccessToken(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: "No token provided" });
-    }
-    
-    const token = authHeader.split(' ')[1];
-    if (!token || !token.startsWith('jwt-token') && !token.match(/^[a-f0-9]{64}$/)) {
-        return res.status(401).json({ message: "Invalid token" });
-    }
-    
-    next();
-}
-
-server.get("/auth/me", verifyAccessToken, (req, res) => {
-    res.json({
-        id: "1",
-        email: "user@example.com",
-        name: "User",
+        accessToken,
+        refreshToken: newRefreshToken,
+        user: {
+            id: "1",
+            email: "user@example.com",
+            name: "User",
+        },
     });
 });
 
