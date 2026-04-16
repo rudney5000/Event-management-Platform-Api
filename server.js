@@ -55,14 +55,18 @@ function getAdminEmailForEvent(event) {
     return org?.email ?? null;
 }
 
-server.use(
-    cors({
-        origin: "*",
-        credentials: true,
-        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-    })
-);
+server.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://event-management-platform-gamma.vercel.app')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200)
+  }
+  
+  next()
+})
 
 server.use(cookieParser())
 server.use(middlewares);
