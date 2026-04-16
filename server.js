@@ -91,7 +91,7 @@ server.post("/auth/login", (req, res) => {
         res.cookie('refreshToken', refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
-          sameSite: 'none',
+          sameSite: 'strict',
           maxAge: 7 * 24 * 60 * 60 * 1000,
           path: '/'
         })
@@ -130,7 +130,7 @@ server.post("/auth/register", (req, res) => {
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none',
+            sameSite: 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000,
             path: '/'
         });
@@ -343,7 +343,7 @@ server.post("/auth/refresh", (req, res) => {
     res.cookie('refreshToken', newRefreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
+        sameSite: 'strict',
         maxAge: 7 * 24 * 60 * 60 * 1000,
         path: '/'
     });
@@ -357,7 +357,7 @@ server.post("/auth/logout", (req, res) => {
     res.clearCookie('refreshToken', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
+        sameSite: 'strict',
         path: '/'
     });
     res.json({ message: "Logged out" });
@@ -390,7 +390,7 @@ server.use("/api", router);
 const httpServer = createServer(server);
 const io = new Server(httpServer, {
     cors: {
-        origin: "*",
+        origin: "https://event-management-platform-gamma.vercel.app",
         methods: ["GET", "POST"],
         allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
